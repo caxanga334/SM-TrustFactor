@@ -20,21 +20,21 @@ public Plugin myinfo = {
 
 #define MAX_STEAMID_LENGTH 32
 
-enum TrustFactors (<<=1) {
+enum TrustFactors {
 	UNTRUSTED = 0,
-	TrustPlaytime = 1,     // t  playtime on server network
-	TrustPremium,          // f  is using free2play account
-	TrustDonorFlag,        // d  player is donor / has spent money on the server
-	TrustCProfilePublic,   // p  is community profile public
-	TrustCProfileSetup,    // s  is community profile set up
-	TrustCProfileLevel,    // l  community profile level
-	TrustCProfileGametime, // g  total playtime for the game
-	TrustCProfileAge,      // o  profile age in months
-	TrustCProfilePoCBadge, // b  progress for pillar of community badge
-	TrustNoVACBans,        // v  no active or passed VAC banns
-	TrustNotEconomyBanned, // e  not currently trade/economy banned
-	TrustSBPPGameBan,      // a  has little to no sb game bans
-	TrustSBPPCommBan,      // c  has little to no sb comm bans
+	TrustPlaytime = (1 << 0),     // t  playtime on server network
+	TrustPremium = (1 << 1),          // f  is using free2play account
+	TrustDonorFlag = (1 << 2),        // d  player is donor / has spent money on the server
+	TrustCProfilePublic = (1 << 3),   // p  is community profile public
+	TrustCProfileSetup = (1 << 4),    // s  is community profile set up
+	TrustCProfileLevel = (1 << 5),    // l  community profile level
+	TrustCProfileGametime = (1 << 6), // g  total playtime for the game
+	TrustCProfileAge = (1 << 7),      // o  profile age in months
+	TrustCProfilePoCBadge = (1 << 8), // b  progress for pillar of community badge
+	TrustNoVACBans = (1 << 9),        // v  no active or passed VAC banns
+	TrustNotEconomyBanned = (1 << 10), // e  not currently trade/economy banned
+	TrustSBPPGameBan = (1 << 11),      // a  has little to no sb game bans
+	TrustSBPPCommBan = (1 << 12),      // c  has little to no sb comm bans
 }
 #define ALLTRUSTFACTORS (view_as<TrustFactors>(0x0fff))
 
@@ -205,6 +205,8 @@ public Action Timer_Playtime(Handle timer) {
 			}
 		}
 	}
+
+	return Plugin_Stop;
 }
 
 public Action Command_CheckTrust(int client, int args) {
@@ -291,7 +293,7 @@ public Action Command_CheckTrust(int client, int args) {
 				condition = cdata.sbppGameBans <= trust_sbppbans;
 				CReplyToCommand(client, "  SB++ Bans: {%s}%d/%d", colors[condition?0:2], cdata.sbppGameBans, trust_sbppbans);
 				condition = cdata.sbppCommBans <= trust_sbppcomms;
-				CReplyToCommand(client, "  SB++ Bans: {%s}%d/%d", colors[condition?0:2], cdata.sbppCommBans, trust_sbppcomms);
+				CReplyToCommand(client, "  SB++ Comms: {%s}%d/%d", colors[condition?0:2], cdata.sbppCommBans, trust_sbppcomms);
 			}
 			
 			CReplyToCommand(client, "  {gold}Trust Level: %d/13", cdata.trustLevel);
@@ -488,7 +490,7 @@ public void OnProfileDataCached(Handle handle, bool failed, bool successfull, EH
 // -- sourcebans --
 
 public bool SourceBansQueryClient(int client, const char[] steam2) {
-	if (!IsValidClient(client)) return;
+	if (!IsValidClient(client)) return false;
 	if (dep_SBPP) {
 		SBPP_OnClientAuthorized(client, steam2);
 	} else {
@@ -499,7 +501,7 @@ public bool SourceBansQueryClient(int client, const char[] steam2) {
 		SetClientTrustData(client, cdata);
 		Notify_OnTrustFactorLoaded(client);
 	}
-	return;
+	return true;
 }
 
 // -- convars & notifier --
@@ -773,6 +775,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("ComposeTrustConditionStringRaw", Native_ComposeConditionFlagString);
 	
 	RegPluginLibrary("trustfactor");
+
+	return APLRes_Success;
 }
 
 public any Native_IsLoaded(Handle plugin, int numParams) {
